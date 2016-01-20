@@ -1,10 +1,10 @@
 //(function() {
 
 var positionArray = [
-    0, 0,
-    1, 0,
+    -1, -1,
+    1, -1,
     1, 1,
-    0, 1
+    -1, 1
 ];
 
 var textureArray = [
@@ -122,8 +122,13 @@ window.gpgpu = function(code, data) {
 
     gl.useProgram(program);
 
+    var frameBuffer = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
+
     var size = getTextureSize(data);
     var texture = createTexture(data, size);
+    
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.uniform1i(uTexture, 0);
@@ -137,9 +142,12 @@ window.gpgpu = function(code, data) {
     gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+//    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+
     gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
 
     var result = new Float32Array(size * size * 4);
+    //gl.readPixels(0, 0, size, size, gl.RGBA, gl.FLOAT, result);
     gl.readPixels(0, 0, size, size, gl.RGBA, gl.FLOAT, result);
     return result;
 };
