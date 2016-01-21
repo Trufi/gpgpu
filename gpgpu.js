@@ -49,7 +49,7 @@ var vertexShaderCode = [
     '',
     'void main(void) {',
     '  v_texture = texture;',
-    '  gl_Position = vec4(position.x, position.y, 0.0, 1.0);',
+    '  gl_Position = vec4(position.xy, 0.0, 1.0);',
     '}'
 ].join('\n');
 
@@ -95,8 +95,41 @@ function createTexture(data, size) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    //gl.bindTexture(gl.TEXTURE_2D, null);
+
     return texture;
 }
+
+function frameBufferIsComplete() {
+  var status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+  var message, value;
+
+  switch (status) {
+    case gl.FRAMEBUFFER_COMPLETE:
+      value = true;
+      break;
+    case gl.FRAMEBUFFER_UNSUPPORTED:
+      message = 'Framebuffer is unsupported';
+      value = false;
+      break;
+    case gl.FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+      message = 'Framebuffer incomplete attachment';
+      value = false;
+      break;
+    case gl.FRAMEBUFFER_INCOMPLETE_DIMENSIONS:
+      message = 'Framebuffer incomplete (missmatched) dimensions';
+      value = false;
+      break;
+    case gl.FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+      message = 'Framebuffer incomplete missing attachment';
+      value = false;
+      break;
+    default:
+      message = 'Unexpected framebuffer status: ' + status;
+      value = false;
+  }
+  return {isComplete: value, message: message};
+};
 
 window.gpgpu = function(code, data) {
     var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
@@ -122,13 +155,14 @@ window.gpgpu = function(code, data) {
 
     gl.useProgram(program);
 
-    var frameBuffer = gl.createFramebuffer();
-    gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
-
     var size = getTextureSize(data);
     var texture = createTexture(data, size);
-    
+
+    var frameBuffer = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+
+    console.log(frameBufferIsComplete());
 
     gl.activeTexture(gl.TEXTURE0);
     gl.uniform1i(uTexture, 0);
@@ -142,13 +176,13 @@ window.gpgpu = function(code, data) {
     gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-//    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
 
     gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
 
     var result = new Float32Array(size * size * 4);
     //gl.readPixels(0, 0, size, size, gl.RGBA, gl.FLOAT, result);
-    gl.readPixels(0, 0, size, size, gl.RGBA, gl.FLOAT, result);
+    //gl.readPixels(0, 0, size, size, gl.RGBA, gl.FLOAT, result);
+    console.log(result);
     return result;
 };
 
