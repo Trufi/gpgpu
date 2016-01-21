@@ -21,10 +21,10 @@ var indexArray = [
 
 var canvas = document.createElement('canvas');
 document.body.appendChild(canvas);
-canvas.width = 500;
-canvas.height = 500;
+canvas.width = 64;
+canvas.height = 64;
 var gl = canvas.getContext('webgl');
-gl.viewport(0, 0, 500, 500);
+gl.viewport(0, 0, 64, 64);
 
 if (!gl.getExtension('OES_texture_float')) {
     throw new Error('Requires OES_texture_float extension');
@@ -84,18 +84,22 @@ function getTextureSize(data) {
 function createTexture(data, size) {
     var length = size * size * 4;
 
-    if (data.length < length) {
-        data[length - 1] = 0;
+    if (data) {
+        if (data.length < length) {
+            data[length - 1] = 0;
+        }
+
+        data = new Float32Array(data);
     }
 
     var texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size, size, 0, gl.RGBA, gl.FLOAT, new Float32Array(data));
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size, size, 0, gl.RGBA, gl.FLOAT, data);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    //gl.bindTexture(gl.TEXTURE_2D, null);
+    gl.bindTexture(gl.TEXTURE_2D, null);
 
     return texture;
 }
@@ -157,13 +161,15 @@ window.gpgpu = function(code, data) {
 
     var size = getTextureSize(data);
     var texture = createTexture(data, size);
+    var frameTexture = createTexture(null, size);
 
     var frameBuffer = gl.createFramebuffer();
     gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, frameTexture, 0);
 
     console.log(frameBufferIsComplete());
 
+    gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.activeTexture(gl.TEXTURE0);
     gl.uniform1i(uTexture, 0);
 
@@ -180,9 +186,7 @@ window.gpgpu = function(code, data) {
     gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
 
     var result = new Float32Array(size * size * 4);
-    //gl.readPixels(0, 0, size, size, gl.RGBA, gl.FLOAT, result);
-    //gl.readPixels(0, 0, size, size, gl.RGBA, gl.FLOAT, result);
-    console.log(result);
+    gl.readPixels(0, 0, size, size, gl.RGBA, gl.FLOAT, result);
     return result;
 };
 
