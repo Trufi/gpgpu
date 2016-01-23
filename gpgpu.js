@@ -20,11 +20,8 @@ var indexArray = [
 ];
 
 var canvas = document.createElement('canvas');
-document.body.appendChild(canvas);
-canvas.width = 64;
-canvas.height = 64;
 var gl = canvas.getContext('webgl');
-gl.viewport(0, 0, 64, 64);
+// gl.viewport(0, 0, 64, 64);
 
 if (!gl.getExtension('OES_texture_float')) {
     throw new Error('Requires OES_texture_float extension');
@@ -69,32 +66,53 @@ function getFragmentShaderCode(code) {
         '',
         'void main(void) {',
         '  vec4 val = texture2D(u_texture, v_texture);',
-        code, // gl_FragColor
+        code,//.replace('return', 'gl_FragColor = '),
         '}'
     ].join('\n');
 }
 
-function getTextureSize(data) {
-    var pixels = data.length / 4;
+function getTextureSize(data, dimension) {
+    var pixels = data.length / dimension;
     var sqr = Math.sqrt(pixels);
     var pow = Math.ceil(Math.log(sqr) / Math.log(2));
     return Math.pow(2, pow);
 }
 
-function createTexture(data, size) {
-    var length = size * size * 4;
+function createTexture(data, size, dimension) {
+    var length = size * size * 4 * dimension;
+    var textureData;
 
-    if (data) {
-        if (data.length < length) {
-            data[length - 1] = 0;
+    if (dimension == 4) {
+        if (data) {
+            if (data.length < length) {
+                data[length - 1] = 0;
+            }
+
+            textureData = new Float32Array(data);
         }
+    } else {
+        textureData = new Float32Array(length);
+        if (data) {
+            var counter = 0;
+            for (var i = 0; i < data.length; i++) {
+                if (i % 4 < dimension) {
+                    textureData[i] = data[counter];
+                    counter++;
+                    // d = 1
+                    // 0 1 2 3
+                    // 0 4 8 12
 
-        data = new Float32Array(data);
+                    // d = 2
+                    // 0 1 2 3
+                    // 0 1 4 5
+                }
+            }
+        }
     }
 
     var texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size, size, 0, gl.RGBA, gl.FLOAT, data);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size, size, 0, gl.RGBA, gl.FLOAT, textureData);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -135,7 +153,12 @@ function frameBufferIsComplete() {
   return {isComplete: value, message: message};
 };
 
-window.gpgpu = function(code, data) {
+window.gpgpu = function(code, data, options) {
+    options = options || {};
+    var dimension = options.dimension || 4;
+
+    var dataLength = data.length;
+
     var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
     gl.shaderSource(fragmentShader, getFragmentShaderCode(code));
     gl.compileShader(fragmentShader);
@@ -159,9 +182,11 @@ window.gpgpu = function(code, data) {
 
     gl.useProgram(program);
 
-    var size = getTextureSize(data);
-    var texture = createTexture(data, size);
-    var frameTexture = createTexture(null, size);
+    var size = getTextureSize(data, dimension);
+    var texture = createTexture(data, size, dimension);
+    var frameTexture = createTexture(null, size, dimension);
+
+    gl.viewport(0, 0, size, size);
 
     var frameBuffer = gl.createFramebuffer();
     gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
@@ -185,8 +210,20 @@ window.gpgpu = function(code, data) {
 
     gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
 
-    var result = new Float32Array(size * size * 4);
-    gl.readPixels(0, 0, size, size, gl.RGBA, gl.FLOAT, result);
+    var frameData = new Float32Array(size * size * 4);
+    gl.readPixels(0, 0, size, size, gl.RGBA, gl.FLOAT, frameData);
+
+    if (dimension == 4) {
+        var result = frameData.subarray(0, dataLength);
+    } else {
+        var result = new Float32Array(dataLength);
+        for (var i = 0; i < dataLength; i++) {
+            result[i] = frameData[i * (5 - dimension)];
+            // d = 1
+            // 0 4 8
+        }
+    }
+
     return result;
 };
 
