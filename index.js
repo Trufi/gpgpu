@@ -44,19 +44,21 @@ var code = `
     gl_FragColor = vec4(result, 0.0, 0.0, 0.0);
 `;
 
-var code = `
-    int tt = 0;
-    for (int i = 0; i < 1000; i++) {
-        if (float(i) > val.x) {
-            break;
-        }
-        tt++;
-    }
-    gl_FragColor = vec4(tt, tt + 1, tt + 2, tt + 3);
-`;
+// var code = `
+//     int tt = 0;
+//     for (int i = 0; i < 1000; i++) {
+//         if (float(i) > val.x) {
+//             break;
+//         }
+//         tt++;
+//     }
+//     gl_FragColor = vec4(tt, tt + 1, tt + 2, tt + 3);
+// `;
 
+console.time('start');
 var res = gpgpu(code, data2, {
     dimension: 4
 });
+console.timeEnd('start');
 
 console.log(res);
