@@ -1,0 +1,19 @@
+{
+  "name": "gpgpu",
+  "version": "0.0.1",
+  "description": "",
+  "main": "gpgpu.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Trufi/gpgpu.git"
+  },
+  "author": "Mstislav Zhivodkov",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Trufi/gpgpu/issues"
+  },
+  "homepage": "https://github.com/Trufi/gpgpu#readme"
+}
